@@ -1,0 +1,21 @@
+---
+- hosts: webservers
+  become: true
+  tasks:
+  - name: Stop node server container
+    docker_container:
+      name: node_server
+      image: aymannedaa/node-server
+      state: stopped
+
+  - name: remove node server container
+    docker_container:
+      name: node_server
+      state: absent
+
+  - name: Run node server container
+    docker_container:
+      name: node_server
+      image: aymannedaa/node-server
+      ports:
+        - "80:3000"
