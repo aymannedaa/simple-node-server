@@ -13,6 +13,11 @@
       name: node_server
       state: absent
 
+  - name: Remove image
+    docker_image:
+      state: absent
+      name: aymannedaa/node-server
+
   - name: Run node server container
     docker_container:
       name: node_server
