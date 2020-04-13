@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
-    "start-prod": "NODE_ENV=production node ./bin/www"
+    "start-prod": "NODE_ENV=production node ./bin/www",
+    "test": "mocha tests/*-test.js"
   },
   "license": "MIT",
   "dependencies": {
@@ -14,5 +15,9 @@
     "http-errors": "1.6.3",
     "morgan": "1.9.1",
     "pug": "2.0.4"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "chai-http": "^4.3.0"
   }
 }
