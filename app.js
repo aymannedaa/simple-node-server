@@ -36,4 +36,6 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
+console.log(`Server started at port ${process.env.PORT || 3000}`);
+
 module.exports = app;
