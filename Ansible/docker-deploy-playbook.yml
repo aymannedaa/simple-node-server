@@ -2,15 +2,15 @@
 - hosts: webservers
   become: true
   tasks:
-  - name: Stop node server container
+  - name: Stop node server container 1
     docker_container:
-      name: node_server
+      name: node_server_1
       image: aymannedaa/node-server
       state: stopped
 
-  - name: remove node server container
+  - name: remove node server container 1
     docker_container:
-      name: node_server
+      name: node_server_1
       state: absent
 
   - name: Remove image
@@ -18,9 +18,27 @@
       state: absent
       name: aymannedaa/node-server
 
-  - name: Run node server container
+  - name: Run node server container 1
     docker_container:
-      name: node_server
+      name: node_server_1
       image: aymannedaa/node-server
       ports:
-        - "80:3000"
+        - "3000:3000"
+
+  - name: Stop node server container 2
+    docker_container:
+      name: node_server_2
+      image: aymannedaa/node-server
+      state: stopped
+
+  - name: remove node server container 2
+    docker_container:
+      name: node_server_2
+      state: absent
+
+  - name: Run node server container 2
+    docker_container:
+      name: node_server_2
+      image: aymannedaa/node-server
+      ports:
+        - "3001:3000"

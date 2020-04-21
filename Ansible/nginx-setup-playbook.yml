@@ -1,0 +1,49 @@
+---
+- hosts: webservers
+  become: true
+  tasks:
+  - name: Make sure Nginx is at the latest version
+  apt:
+    name: nginx
+    state: latest
+
+  - name: Start Nginx
+  service:
+    name: nginx
+    state: started
+
+  - name: Add certbot repository
+  apt_repository:
+    repo: 'ppa:certbot/certbot'
+
+  - name: Install Certbot's Nginx package
+  apt:
+    name: python-certbot-nginx
+    state: present
+
+  - name: Check if certificate already exists.
+  stat:
+    path: /etc/letsencrypt/live/muistini.com/cert.pem
+  register: letsencrypt_cert
+
+  - name: Stop Nginx to allow certbot to generate a certification.
+  service:
+    name: nginx
+    state: stopped
+
+  - name: Generate new certificate if one doesn't exist.
+  shell: "certbot --nginx --noninteractive --agree-tos --email aymannedaa@gmail.com -d muistini.com -d www.muistini.com"
+  when: not letsencrypt_cert.stat.exists
+
+  - name: Setup nginx conf
+  template:
+    src: nginx.conf
+    dest: /etc/nginx/sites-enabled/default
+  notify: restart nginx
+
+  handlers:
+  - name: restart nginx
+    service:
+      name: nginx
+      state: restarted
+  
