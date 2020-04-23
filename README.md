@@ -1,8 +1,8 @@
 # Simple nodejs express webserver
 
-Using Ansible this project deploys a docker container having a simple http webserver written in express and nodejs into one or more clean Ubuntu AWS EC2 instance(s), installing all the necessary software packages to allow the container to run.
+Using Ansible this project deploys into a clean Ubuntu AWS EC2 instance an Nginx Reverse Proxy that is used to enable HTTPS support and act as a load balancer redirecting HTTP/HTTPS traffic to 2 docker containers each running a simple http webserver using Express and Node, installing all the necessary software packages to allow the containers to run.
 
-A CI/CD pipeline has been created with Jenkins that listens to push changes on master branch then runs the unit tests and if successful builds the docker image and pushes it to dockerhub. Then Jenkins uses Ansible playbooks to provision one or more EC2 instances, stopping the previous docker container (if it exists), removing the image and running a new one (pulling the new image from dockerhub).
+A CI/CD pipeline has been created with Jenkins that listens to push changes on master branch then runs the unit tests and if successful builds the docker image and pushes it to dockerhub. Then Jenkins uses Ansible playbooks to provision an EC2 instance, stopping the first docker containers (if exists), removing the image and running the new one (pulling the new image from dockerhub). Then doing the same for the 2nd docker container so that there is no downtime for the whole application. Using docker compose would be a better approach in handling this (See TODO list at the end of this Readme). Finally Ansible runs the Nginx setup playbook to setup Nginx, install the necessary SSL certificate using Certbot and reloads Nginx configuration.
 
 ## API Endpoints:
 
@@ -75,7 +75,9 @@ docker run -p 3000:3000 -d node-server
 - Clone this repo and cd ```simple-node-server/Ansible```.
 - Make a directory with the name ```.keystore```.
 - Copy the instance key downloaded earlier to the ```.keystore``` folder.
-- Go to hosts file and change the ip address of the instance(s) with that of your own instance (if you plan to use only one instance remove the line starting with ```ubuntu-server-2```).
+- Go to hosts file and change the ip address of the instance with that of your own instance.
+- For the nginx-setup-playbook.yml change all occurances of ```muistini.com``` with the domain name that you own.
+- Change the A record of the domain name you own to point to the IP address of your AWS EC2 instance.
 
 ## Run Ansible
 
@@ -87,107 +89,11 @@ docker run -p 3000:3000 -d node-server
 
 Navigate to ```<instance public IP address>/demo``` in your browser to see the result.
 
-### Example output logs from running ansible
-PLAY [webservers] **************************************************************
-
-TASK [Gathering Facts] *********************************************************
-ok: [ubuntu-server-1]
-ok: [ubuntu-server-2]
-ok: [ubuntu-server-3]
-
-TASK [Add Docker Ubuntu's repository key to APT's trusted package sources] *****
-ok: [ubuntu-server-1]
-ok: [ubuntu-server-2]
-changed: [ubuntu-server-3]
-
-TASK [Add docker repo] *********************************************************
-ok: [ubuntu-server-1]
-ok: [ubuntu-server-2]
-changed: [ubuntu-server-3]
-
-TASK [Update repositories cache and install "docker-ce" package] ***************
-ok: [ubuntu-server-1]
-ok: [ubuntu-server-2]
-changed: [ubuntu-server-3]
-
-TASK [Install required system packages] ****************************************
-ok: [ubuntu-server-2] => (item=python3-pip)
-ok: [ubuntu-server-1] => (item=python3-pip)
-ok: [ubuntu-server-2] => (item=virtualenv)
-ok: [ubuntu-server-1] => (item=virtualenv)
-ok: [ubuntu-server-2] => (item=python3-setuptools)
-ok: [ubuntu-server-1] => (item=python3-setuptools)
-changed: [ubuntu-server-3] => (item=python3-pip)
-changed: [ubuntu-server-3] => (item=virtualenv)
-ok: [ubuntu-server-3] => (item=python3-setuptools)
-
-TASK [Install Docker Module for Python] ****************************************
-ok: [ubuntu-server-1]
-ok: [ubuntu-server-2]
-changed: [ubuntu-server-3]
-
-TASK [Add user to docker group] ************************************************
-ok: [ubuntu-server-2]
-ok: [ubuntu-server-1]
-changed: [ubuntu-server-3]
-
-PLAY RECAP *********************************************************************
-ubuntu-server-1            : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
-ubuntu-server-2            : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
-ubuntu-server-3            : ok=7    changed=6    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
-
-[ansible-deploy] $ ansible-playbook /home/ubuntu/ansible/docker-deploy-playbook.yml -i /home/ubuntu/ansible/hosts -f 5
-
-PLAY [webservers] **************************************************************
-
-TASK [Gathering Facts] *********************************************************
-ok: [ubuntu-server-2]
-ok: [ubuntu-server-1]
-ok: [ubuntu-server-3]
-
-TASK [Stop node server container] **********************************************
-changed: [ubuntu-server-2]
-changed: [ubuntu-server-1]
-changed: [ubuntu-server-3]
-
-TASK [remove node server container] ********************************************
-changed: [ubuntu-server-2]
-changed: [ubuntu-server-1]
-changed: [ubuntu-server-3]
-
-TASK [Remove image] ************************************************************
-changed: [ubuntu-server-2]
-changed: [ubuntu-server-1]
-changed: [ubuntu-server-3]
-
-TASK [Run node server container] ***********************************************
-changed: [ubuntu-server-2]
-changed: [ubuntu-server-1]
-changed: [ubuntu-server-3]
-
-PLAY RECAP *********************************************************************
-ubuntu-server-1            : ok=5    changed=4    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
-ubuntu-server-2            : ok=5    changed=4    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
-ubuntu-server-3            : ok=5    changed=4    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-
 ---
 
 ## TODO (Upcoming improvements and new features)
+- ~Use HTTPS~
 - Allow hosts IPs and keys to be given to Ansible as environment variables
-- Use HTTPS, doing so is easy in node just follow these steps:
-    - Use [Let’s Encrypt](https://letsencrypt.org/) to generate SSL certificates for free
-    - Use Nodejs [HTTPS native module](https://nodejs.org/api/https.html) and add the following to ```app.js```:
-    ```
-    const https = require("https");
-    const fs = require("fs");
-    const options = {
-        key: fs.readFileSync("PATH/TO/key.pem"),
-        cert: fs.readFileSync("PATH/TO/chain.pem")
-    };
-    https.createServer(options, app).listen(443);
-    ```
-    - Modify Dockerfile by replacing ```EXPOSE 3000``` with ```EXPOSE 3000 443```
-
 - Use ```Helmet``` to set security-related HTTP response headers, refer to: https://expressjs.com/en/advanced/best-practice-security.html
 - Use Docker Compose or Kubernetes for container deployment and orchestration.
 - Use Ansible to create AWS EC2 instances (hosts and control servers) as a pre-step to docker-setup-playbook.yml
